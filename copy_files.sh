@@ -1,13 +1,13 @@
-# ./sashi_release.sh v3.5.16 main kavindu76
-#curl -fsSL https://github.com/BimsaraFernando/evres1/releases/download/sashi_v3.5.16/setup.sh | cat | sudo SKIP_SYSREQ=1 NO_DOMAIN=1 NETWORK=devnet bash -s install
+# ./sashi_release.sh v3.5.17 main kavindu77
+#curl -fsSL https://github.com/BimsaraFernando/evres1/releases/download/sashi_v3.5.17/setup.sh | cat | sudo SKIP_SYSREQ=1 NO_DOMAIN=1 NETWORK=devnet bash -s install
 #!/bin/bash
 
 # Define an array of source and destination file paths
 file_paths=(
-    "/home/kavindu/Documents/Evernode/sashimono/sashimono/build/installer.tar.gz /home/kavindu/Documents/Evernode/release/evres1/installer/installer.tar.gz"
-    "/home/kavindu/Documents/Evernode/sashimono/sashimono/build/setup-jshelper.tar.gz /home/kavindu/Documents/Evernode/release/evres1/installer/setup-jshelper.tar.gz"
-    "/home/kavindu/Documents/Evernode/sashimono/sashimono/installer/setup.sh /home/kavindu/Documents/Evernode/release/evres1/installer/setup.sh"
-    "/home/kavindu/Documents/Evernode/sashimono/sashimono/build/reputation-contract.tar.gz /home/kavindu/Documents/Evernode/release/evres1/installer/reputation-contract.tar.gz"
+    "/home/kavindu/Documents/Evernode/sashimono/sashimono/build/installer.tar.gz /home/kavindu/Documents/Evernode/release-Kavindu/evres1/installer/installer.tar.gz"
+    "/home/kavindu/Documents/Evernode/sashimono/sashimono/build/setup-jshelper.tar.gz /home/kavindu/Documents/Evernode/release-Kavindu/evres1/installer/setup-jshelper.tar.gz"
+    "/home/kavindu/Documents/Evernode/sashimono/sashimono/installer/setup.sh /home/kavindu/Documents/Evernode/release-Kavindu/evres1/installer/setup.sh"
+    "/home/kavindu/Documents/Evernode/sashimono/sashimono/build/reputation-contract.tar.gz /home/kavindu/Documents/Evernode/release-Kavindu/evres1/installer/reputation-contract.tar.gz"
 )
 
 cd "/home/kavindu/Documents/Evernode/sashimono/sashimono/" &&  make -j8 && make installer -j8
