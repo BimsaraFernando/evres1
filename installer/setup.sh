@@ -1022,6 +1022,8 @@
             inetaddr=$(jq -r ".hp.host_address | select( . != null )" "$SASHIMONO_CONFIG")
             init_peer_port=$(jq ".hp.init_peer_port | select( . != null )" "$SASHIMONO_CONFIG")
             init_user_port=$(jq ".hp.init_user_port | select( . != null )" "$SASHIMONO_CONFIG")
+            init_gp_tcp_port=$(jq ".hp.init_gp_tcp_port | select( . != null )" "$SASHIMONO_CONFIG")
+            init_gp_udp_port=$(jq ".hp.init_gp_udp_port | select( . != null )" "$SASHIMONO_CONFIG")
             alloc_cpu=$(jq -r ".system.max_cpu_us | select( . != null )" "$SASHIMONO_CONFIG")
             alloc_ramKB=$(jq -r ".system.max_mem_kbytes | select( . != null )" "$SASHIMONO_CONFIG")
             alloc_swapKB=$(jq -r ".system.max_swap_kbytes | select( . != null )" "$SASHIMONO_CONFIG")
@@ -1029,7 +1031,7 @@
             alloc_instcount=$(jq -r ".system.max_instance_count | select( . != null )" "$SASHIMONO_CONFIG")
 
             # Validating important configurations.
-            ([ -z $inetaddr ] || [ -z $init_peer_port ] || [ -z $init_user_port ] || [ -z $alloc_cpu ] || [ -z $alloc_ramKB ] || [ -z $alloc_swapKB ] || [ -z $alloc_diskKB ] || [ -z $alloc_instcount ]) && echo "Configuration file format has been altered." && exit 1
+            ([ -z $inetaddr ] || [ -z $init_peer_port ] || [ -z $init_user_port ] || [ -z $init_gp_tcp_port ] || [ -z $init_gp_udp_port ] || [ -z $alloc_cpu ] || [ -z $alloc_ramKB ] || [ -z $alloc_swapKB ] || [ -z $alloc_diskKB ] || [ -z $alloc_instcount ]) && echo "Configuration file format has been altered." && exit 1
         fi
     }
 
