@@ -1,4 +1,4 @@
-# ./sashi_release.sh v3.5.22 main kavindu82
+# ./sashi_release.sh v3.5.23 main kavindu83
 #curl -fsSL https://github.com/BimsaraFernando/evres1/releases/download/sashi_v3.5.22/setup.sh | cat | sudo SKIP_SYSREQ=1 NO_DOMAIN=1 NETWORK=devnet bash -s install
 #!/bin/bash
 
