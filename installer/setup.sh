@@ -1449,7 +1449,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             usermod -a -G $SASHIADMIN_GROUP $REPUTATIOND_USER
             loginctl enable-linger $REPUTATIOND_USER # Enable lingering to support service installation.
         fi
-        echo "ports : ${inetaddr} ${init_peer_port} ${init_user_port} ${init_gp_tcp_port} ${init_gp_udp_port} ${countrycode} "
+        echo "params - setup.sh : ${inetaddr} ${init_peer_port} ${init_user_port} ${init_gp_tcp_port} ${init_gp_udp_port} ${countrycode} tls_key_file: ${tls_key_file} "
         # Filter logs with STAGE prefix and ommit the prefix when echoing.
         # If STAGE log contains -p arg, move the cursor to previous log line and overwrite the log.
         ! UPGRADE=$upgrade EVERNODE_REGISTRY_ADDRESS=$registry_address ./sashimono-install.sh $inetaddr $init_peer_port $init_user_port $init_gp_tcp_port $init_gp_udp_port $countrycode $alloc_instcount \
@@ -1460,9 +1460,12 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
                 cleaned_line=$(echo "$line" | sed -E 's/\[STAGE\]|\[INFO\]//g' | awk '{sub(/^[ \t]+/, ""); print}')
                 [[ $cleaned_line =~ ^-p(.*)$ ]] && echo -e "\\e[1A\\e[K${cleaned_line:3}" || echo "${cleaned_line}"
             done && install_failure
+        echo "sashimono-install.sh completed"
 
         ! create_evernode_alias && install_failure
 
+        echo "create_evernode_alias completed"
+        
         set +o pipefail
 
         rm -r $tmp
