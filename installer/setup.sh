@@ -1613,11 +1613,19 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         echo "Evernode reputationd status: $evernode_reputationd_status"
         if [[ $reputationd_enabled == true ]]; then
             echo -e "\nYour reputationd account details are stored in $REPUTATIOND_DATA/reputationd.cfg"
+            reputationd_reimbursement_info
         fi
     }
 
     function reputationd_reimbursement_info() {
         # check reputationd reimbursement status with config value
+        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG")
+        
+        if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
+            echomult "Evernode reputation reimbursement interval : $saved_reimburse_frequency"
+        else
+            echo "Evernode reputation reimbursement interval : not configured."
+        fi
         local evernode_reputationd_reimbursement_status=$(sudo -u "$REPUTATIOND_USER" XDG_RUNTIME_DIR="$reputationd_user_runtime_dir" systemctl --user is-active $REPUTATIOND_SERVICE)
         echo "Evernode reputationd reimbursemet status: $evernode_reputationd_reimbursement_status"
         if [[ $reputationd_enabled == true ]]; then
@@ -1651,7 +1659,6 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         echo ""
 
         reputationd_info
-        reputationd_reimbursement_info
     }
 
     function get_country_code() {
@@ -2250,7 +2257,24 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
     
     function configure_reputationd_reimbursement() {
         [ "$EUID" -ne 0 ] && echo "Please run with root privileges (sudo)." && return 1
-        if confirm "\nWould you like to reimburse reputation account for reputation contract lease costs?"; then
+
+        #check reputationd enabled
+        if [ ! -f "/home/$REPUTATIOND_USER/.config/systemd/user/$REPUTATIOND_SERVICE.service" ]; then
+            # reputationd_enabled=false
+            echo "The host is currently not opted-in to Evernode reputation and reward system." && return 1
+        fi
+
+        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG")
+        if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
+            ! confirm "\nYou have already opted in for reputation reimbursement. Reimbursement interval is $saved_reimburse_frequency hrs. Do you want to change the reimbursement frequency?" && return 1
+            set_reimbursement_config
+        elif confirm "\nWould you like to reimburse reputation account for reputation contract lease costs?"; then
+            set_reimbursement_config
+        fi
+
+    }
+
+    set_reimbursement_config(){
             echomult "Configuring Evernode reputation reimbursement system"
             while true; do
                 read -p "Enter the hours amount for reimbursement frequency: " -e reimburse_frequency </dev/tty
@@ -2263,10 +2287,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
                     echo "Invalid frequency. Please enter a valid number."
                 fi
             done
-            
-        fi
-
-         echo "Opted-in to the Evernode reputation reimbursement system."
+           echo "Opted-in to the Evernode reputation reimbursement system."
 
     }
 
@@ -2275,19 +2296,16 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
 
         echomult "Removing Evernode reputation reimbursement system"
 
-        # check config whether already opted in
-        local saved_reimburse_frequency=$(jq -r '.xrpl.secretPath' "$REPUTATIOND_CONFIG")
+        # check config whether already reimbursing enabled 
+        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG")
         
         if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
-            removed_reimbusement = true
             # set default config
             ! sudo -u $REPUTATIOND_USER REPUTATIOND_DATA_DIR=$REPUTATIOND_DATA node $REPUTATIOND_BIN update-reimbursement-config && echo "Error updating reputationd reimbursement frequency" && return 1
-            echomult "reputationd reimbursement frequency removed"
+            echomult "Removed the Evernode reputation reimbursement system."
         else
             echo "Evernode reputation reimbursement value is not configured."
         fi
-
-        $removed_reimbusement && echo "Opted-out from the Evernode reputation reimbursement system."
     }
 
     # Begin setup execution flow --------------------
@@ -2599,14 +2617,14 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             echo ""
             ! sudo -u $REPUTATIOND_USER REPUTATIOND_DATA_DIR=$REPUTATIOND_DATA node $REPUTATIOND_BIN repinfo && echo "Error getting reputation status" && exit 1
         elif [ "$2" == "reimburse" ]; then
-            if [ "$3" == "opt-in" ]; then
+            if [ "$3" == "set" ]; then
                 if ! configure_reputationd_reimbursement; then
-                    echomult "\nError occured configuring ReputationD. Retry with the same command again."
+                    echomult "\nError occured setting ReputationD Reimbursement. Retry with the same command again."
                     exit 1
                 fi
-            elif [ "$3" == "opt-out" ]; then
+            elif [ "$3" == "remove" ]; then
                 if ! remove_reputationd_reimbursement; then
-                    echomult "\nError occured removing ReputationD. Retry with the same command again."
+                    echomult "\nError occured removing ReputationD Reimbursement. Retry with the same command again."
                     exit 1
                 fi
             else
@@ -2620,7 +2638,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             \nSupported commands:
             \nopt-in - Opt in to the Evernode reputation for reward distribution.
             \nopt-out - Opt out from the Evernode reputation for reward distribution.
-            \nreimburse <opt-in|opt-out> - Opt-in or opt-out for the reimbursing evernode contract lease amount.
+            \nreimburse <set|remove> - Set or Remove contract lease reimbursement configurations.
             \nstatus - Check the status of Evernode reputation for reward distribution." && exit 1
         fi
     fi
