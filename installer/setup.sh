@@ -2630,8 +2630,8 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             else
                 echomult "ReputationD management reimbursing tool
                 \nSupported commands:
-                \nopt-in - Opt in for the reimbursing evernode contract lease amount.
-                \nopt-out - Opt-out for the reimbursing evernode contract lease amount." && exit 1
+                \nset - set a reimbursing evernode contract lease amount.
+                \nremove - remove reimbursing evernode contract lease amount." && exit 1
             fi
         else
             echomult "ReputationD management tool
