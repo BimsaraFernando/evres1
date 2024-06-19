@@ -2227,7 +2227,10 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
     function remove_reputationd() {
         [ "$EUID" -ne 0 ] && echo "Please run with root privileges (sudo)." && return 1
 
-        remove_reputationd_reimbursement
+        if ! remove_reputationd_reimbursement; then
+            echomult "\nError occured removing ReputationD Reimbursement. Retry with the same command again."
+            exit 1
+        fi
 
         reputationd_user_dir=/home/"$REPUTATIOND_USER"
         reputationd_user_id=$(id -u "$REPUTATIOND_USER")
@@ -2616,12 +2619,12 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         elif [ "$2" == "reimburse" ]; then
             if [ "$3" == "set" ]; then
                 if ! configure_reputationd_reimbursement; then
-                    echomult "\nError occured setting ReputationD Reimbursement. Retry with the same command again."
+                    echomult "\nError occured setting ReputationD Reimbursement."
                     exit 1
                 fi
             elif [ "$3" == "remove" ]; then
                 if ! remove_reputationd_reimbursement; then
-                    echomult "\nError occured removing ReputationD Reimbursement. Retry with the same command again."
+                    echomult "\nError occured removing ReputationD Reimbursement."
                     exit 1
                 fi
             else
