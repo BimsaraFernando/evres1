@@ -2249,12 +2249,12 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
     }
     
     function configure_reputationd_reimbursement() {
-        [ "$EUID" -ne 0 ] && echo "Please run with root privileges (sudo)." && exit 1
+        [ "$EUID" -ne 0 ] && echo "Please run with root privileges (sudo)." && return 1
 
         #check reputationd enabled
         if [ ! -f "/home/$REPUTATIOND_USER/.config/systemd/user/$REPUTATIOND_SERVICE.service" ]; then
             # reputationd_enabled=false
-            echo "The host is currently not opted-in to Evernode reputation and reward system." && exit 1
+            echo "The host is currently not opted-in to Evernode reputation and reward system." && return 1
         fi
 
         local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG")
@@ -2266,6 +2266,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
                 set_reimbursement_config
             else
                 echomult "\nDenied reputation account reimbursement.\nYou can opt-in for reimbursement later by using 'evernode reputationd reimburse' command.\n"
+            fi
         fi
 
     }
