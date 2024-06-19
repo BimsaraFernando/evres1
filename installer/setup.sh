@@ -2226,7 +2226,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
 
     function remove_reputationd() {
         [ "$EUID" -ne 0 ] && echo "Please run with root privileges (sudo)." && return 1
-
+        
         if ! remove_reputationd_reimbursement; then
             echomult "\nError occured removing ReputationD Reimbursement. Retry with the same command again."
             exit 1
@@ -2245,7 +2245,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             rm -f $service_path
             local service_removed=true
         else
-            echo "Evernode reputation for reward distribution is not configured."
+            echo "Evernode reputation for reward distribution is not configured." && exit 1
         fi
 
         $service_removed && echo "Opted-out from the Evernode reputation for reward distribution."
@@ -2257,7 +2257,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         #check reputationd enabled
         if [ ! -f "/home/$REPUTATIOND_USER/.config/systemd/user/$REPUTATIOND_SERVICE.service" ]; then
             # reputationd_enabled=false
-            echo "The host is currently not opted-in to Evernode reputation and reward system." && return 1
+            echo "The host is currently not opted-in to Evernode reputation and reward system." && exit 1
         fi
 
         local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG")
@@ -2294,10 +2294,8 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
     function remove_reputationd_reimbursement() {
         [ "$EUID" -ne 0 ] && echo "Please run with root privileges (sudo)." && return 1
 
-        echomult "Removing Evernode reputation reimbursement system"
-
         # check config whether already reimbursing enabled 
-        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG" )
+        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG" 2>/dev/null)
         
         if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
             # set default config
