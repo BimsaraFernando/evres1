@@ -1619,7 +1619,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
 
     function reputationd_reimbursement_info() {
         # check reputationd reimbursement status with config value
-        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG")
+        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG" 2>/dev/null)
         
         if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
             echomult "\nEvernode reputation reimbursement interval : $saved_reimburse_frequency"
@@ -2297,7 +2297,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         echomult "Removing Evernode reputation reimbursement system"
 
         # check config whether already reimbursing enabled 
-        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG")
+        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG" )
         
         if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
             # set default config
@@ -2613,9 +2613,12 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             fi
         elif [ "$2" == "status" ]; then
             echo ""
-            reputationd_info
-            echo ""
             ! sudo -u $REPUTATIOND_USER REPUTATIOND_DATA_DIR=$REPUTATIOND_DATA node $REPUTATIOND_BIN repinfo && echo "Error getting reputation status" && exit 1
+            echo -e "\n"
+            reputationd_info
+
+            echomult "\nNOTE: To participate in this reputation assessment process continuously, you need to ensure that your reputation account
+            \nhas a sufficient EVR balance to perform the instance acquisitions."
         elif [ "$2" == "reimburse" ]; then
             if [ "$3" == "set" ]; then
                 if ! configure_reputationd_reimbursement; then
