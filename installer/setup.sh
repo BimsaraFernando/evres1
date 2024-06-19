@@ -27,12 +27,9 @@
     reputationd_script_dir=$(dirname "$(realpath "$0")")
     root_user="root"
 
-    repo_owner="BimsaraFernando"
-    repo_name="evres1"
+    repo_owner="EvernodeXRPL"
+    repo_name="evernode-resources"
     desired_branch="main"
-    # repo_owner="EvernodeXRPL"
-    # repo_name="evernode-resources"
-    # desired_branch="main"
 
     latest_version_endpoint="https://api.github.com/repos/$repo_owner/$repo_name/releases/latest"
     latest_version_data=$(curl -s "$latest_version_endpoint")
@@ -1612,7 +1609,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         local evernode_reputationd_status=$(sudo -u "$REPUTATIOND_USER" XDG_RUNTIME_DIR="$reputationd_user_runtime_dir" systemctl --user is-active $REPUTATIOND_SERVICE)
         echo "Evernode reputationd status: $evernode_reputationd_status"
         if [[ $reputationd_enabled == true ]]; then
-            echo -e "\nYour reputationd account details are stored in $REPUTATIOND_DATA/reputationd.cfg"
+            echo -e "\nYour reputationd account and reimbursement details are stored in $REPUTATIOND_DATA/reputationd.cfg"
             reputationd_reimbursement_info
         fi
     }
@@ -1622,14 +1619,9 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG")
         
         if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
-            echomult "Evernode reputation reimbursement interval : $saved_reimburse_frequency"
+            echomult "\nEvernode reputation reimbursement interval : $saved_reimburse_frequency"
         else
-            echo "Evernode reputation reimbursement interval : not configured."
-        fi
-        local evernode_reputationd_reimbursement_status=$(sudo -u "$REPUTATIOND_USER" XDG_RUNTIME_DIR="$reputationd_user_runtime_dir" systemctl --user is-active $REPUTATIOND_SERVICE)
-        echo "Evernode reputationd reimbursemet status: $evernode_reputationd_reimbursement_status"
-        if [[ $reputationd_enabled == true ]]; then
-            echo -e "\nYour reputationd reimbursement details are stored in $REPUTATIOND_DATA/reputationd.cfg"
+            echo "Evernode reputation reimbursement : not configured."
         fi
     }
 
