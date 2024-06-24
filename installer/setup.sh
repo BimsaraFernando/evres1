@@ -1620,6 +1620,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
 
     function reputationd_reimbursement_info() {
         # check reputationd reimbursement status with config value
+        #TODO:-apply updated config
         local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG" 2>/dev/null)
         
         if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
