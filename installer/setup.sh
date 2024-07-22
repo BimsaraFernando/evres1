@@ -27,9 +27,12 @@
     reputationd_script_dir=$(dirname "$(realpath "$0")")
     root_user="root"
 
-    repo_owner="EvernodeXRPL"
-    repo_name="evernode-test-resources"
+    repo_owner="BimsaraFernando"
+    repo_name="evres1"
     desired_branch="main"
+    # repo_owner="EvernodeXRPL"
+    # repo_name="evernode-test-resources"
+    # desired_branch="main"
 
     # Reputation modes : 0 - "none", 1 - "OneToOne", 2 - "OneToMany"
     is_fresh_reputation_acc=false
