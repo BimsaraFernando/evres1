@@ -27,12 +27,9 @@
     reputationd_script_dir=$(dirname "$(realpath "$0")")
     root_user="root"
 
-    repo_owner="BimsaraFernando"
-    repo_name="evres1"
+    repo_owner="EvernodeXRPL"
+    repo_name="evernode-test-resources"
     desired_branch="main"
-    # repo_owner="EvernodeXRPL"
-    # repo_name="evernode-resources"
-    # desired_branch="main"
 
     # Reputation modes : 0 - "none", 1 - "OneToOne", 2 - "OneToMany"
     is_fresh_reputation_acc=false
@@ -76,7 +73,6 @@
     tls_cabundle_file="self"
     description="-"
     fallback_rippled_servers="-"
-    reimburse_frequency="-"
 
     # export vars used by Sashimono installer.
     export USER_BIN=/usr/bin
@@ -684,6 +680,16 @@
             read -ep "Please specify the two-letter country code where your server is located in (eg. AU): " countrycode </dev/tty
             resolve_countrycode || echo "Invalid country code."
         done
+    }
+
+    function check_ipv4_req() {
+        # Check for IPv4 addresses
+        local ipv4_addresses=$(ip -4 addr show | grep inet)
+        if [ -z "$ipv4_addresses" ]; then
+            echomult "Your system does not support IPv4."
+            echomult "$evernode host registration requires IPv4 support for dApp deployment."
+            exit 1
+        fi
     }
 
     function set_ipv6_subnet() {
@@ -1565,7 +1571,6 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             echo "Uninstalling for transfer..."
             ! UPGRADE=$upgrade TRANSFER=1 $SASHIMONO_BIN/sashimono-uninstall.sh $2 && uninstall_failure
         fi
-        remove_reputationd
         # Remove the evernode alias at the end.
         # So, if the uninstallation failed user can try uninstall again with evernode commands.
         remove_evernode_alias
@@ -1678,20 +1683,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         local evernode_reputationd_status=$(sudo -u "$REPUTATIOND_USER" XDG_RUNTIME_DIR="$reputationd_user_runtime_dir" systemctl --user is-active $REPUTATIOND_SERVICE)
         echo "Evernode reputationd status: $evernode_reputationd_status"
         if [[ $reputationd_enabled == true ]]; then
-            echo -e "\nYour reputationd account and reimbursement details are stored in $REPUTATIOND_DATA/reputationd.cfg"
-            reputationd_reimbursement_info
-        fi
-    }
-
-    function reputationd_reimbursement_info() {
-        # check reputationd reimbursement status with config value
-        #TODO:-apply updated config
-        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG" 2>/dev/null)
-        
-        if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
-            echomult "\nEvernode reputation reimbursement interval : $saved_reimburse_frequency"
-        else
-            echo "Evernode reputation reimbursement : not configured."
+            echo -e "\nYour reputationd account details are stored in $REPUTATIOND_DATA/reputationd.cfg"
         fi
     }
 
@@ -2167,7 +2159,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         fi
 
         if [ -f "$REPUTATIOND_CONFIG" ]; then
-            reputationd_secret_path=$(jq -r '.xrpl.secretPath' "$REPUTATIOND_CONFIG" 2>/dev/null)
+            reputationd_secret_path=$(jq -r '.xrpl.secretPath' "$REPUTATIOND_CONFIG")
             [ -f $reputationd_secret_path ] && chown "$REPUTATIOND_USER":"$SASHIADMIN_GROUP" $reputationd_secret_path
         fi
         if [ "$upgrade" == "0" ]; then
@@ -2231,7 +2223,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
 
             generate_qrcode "$reputationd_xrpl_address"
 
-            ! sudo -u $REPUTATIOND_USER REPUTATIOND_DATA_DIR=$REPUTATIOND_DATA node $REPUTATIOND_BIN new $reputationd_xrpl_address $reputationd_key_file_path $reimburse_frequency && echo "Error creating configs" && return 1
+            ! sudo -u $REPUTATIOND_USER REPUTATIOND_DATA_DIR=$REPUTATIOND_DATA node $REPUTATIOND_BIN new $reputationd_xrpl_address $reputationd_key_file_path && echo "Error creating configs" && return 1
 
             echomult "To set up your reputationd host account, ensure a deposit of $min_reputation_xah_requirement XAH to cover the regular transaction fees for the first three months."
             echomult "\nChecking the reputationd account condition."
@@ -2301,17 +2293,10 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         fi
 
         echo "Opted-in to the Evernode reputation for reward distribution."
-
-        configure_reputationd_reimbursement
     }
 
     function remove_reputationd() {
         [ "$EUID" -ne 0 ] && echo "Please run with root privileges (sudo)." && return 1
-        
-        if ! remove_reputationd_reimbursement; then
-            echomult "\nError occured removing ReputationD Reimbursement. Retry with the same command again."
-            exit 1
-        fi
 
         reputationd_user_dir=/home/"$REPUTATIOND_USER"
         reputationd_user_id=$(id -u "$REPUTATIOND_USER")
@@ -2324,68 +2309,12 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             sudo -u "$REPUTATIOND_USER" XDG_RUNTIME_DIR="$reputationd_user_runtime_dir" systemctl --user stop $REPUTATIOND_SERVICE
             sudo -u "$REPUTATIOND_USER" XDG_RUNTIME_DIR="$reputationd_user_runtime_dir" systemctl --user disable $REPUTATIOND_SERVICE
             rm -f $service_path
-            systemctl daemon-reload
             local service_removed=true
         else
-            echo "Evernode reputation for reward distribution is not configured." && return 1
+            echo "Evernode reputation for reward distribution is not configured."
         fi
 
         $service_removed && echo "Opted-out from the Evernode reputation for reward distribution."
-    }
-    
-    function configure_reputationd_reimbursement() {
-        [ "$EUID" -ne 0 ] && echo "Please run with root privileges (sudo)." && return 1
-
-        #check reputationd enabled
-        if [ ! -f "/home/$REPUTATIOND_USER/.config/systemd/user/$REPUTATIOND_SERVICE.service" ]; then
-            # reputationd_enabled=false
-            echo "The host is currently not opted-in to Evernode reputation and reward system." && return 1
-        fi
-
-        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG" 2>/dev/null)
-        if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
-            ! confirm "\nYou have already opted in for reputation reimbursement. Reimbursement interval is $saved_reimburse_frequency hrs. Do you want to change the reimbursement frequency?" && return 1
-            set_reimbursement_config
-        else
-            if confirm "\nWould you like to reimburse reputation account for reputation contract lease costs?"; then
-                set_reimbursement_config
-            else
-                echomult "\nDenied reputation account reimbursement.\nYou can opt-in for reimbursement later by using 'evernode reputationd reimburse' command.\n"
-            fi
-        fi
-
-    }
-
-    set_reimbursement_config(){
-            echomult "Configuring Evernode reputation reimbursement system"
-            while true; do
-                read -p "Enter the hours amount for reimbursement frequency: " -e reimburse_frequency </dev/tty
-                if [[ "$reimburse_frequency" =~ ^[0-9]+$ ]]; then
-                    # set config
-                    ! sudo -u $REPUTATIOND_USER REPUTATIOND_DATA_DIR=$REPUTATIOND_DATA node $REPUTATIOND_BIN update-reimbursement-config $reimburse_frequency && echo "Error updating reputationd reimbursement frequency" && return 1
-                    echomult "new reputationd reimbursement frequency added"
-                    break
-                else
-                    echo "Invalid frequency. Please enter a valid number."
-                fi
-            done
-           echo "Opted-in to the Evernode reputation reimbursement system."
-
-    }
-
-    function remove_reputationd_reimbursement() {
-        [ "$EUID" -ne 0 ] && echo "Please run with root privileges (sudo)." && return 1
-
-        # check config whether already reimbursing enabled 
-        local saved_reimburse_frequency=$(jq -r '.reimburse.frequency' "$REPUTATIOND_CONFIG" 2>/dev/null)
-        
-        if [[ "$saved_reimburse_frequency" =~ ^[0-9]+$ ]]; then
-            # set default config
-            ! sudo -u $REPUTATIOND_USER REPUTATIOND_DATA_DIR=$REPUTATIOND_DATA node $REPUTATIOND_BIN update-reimbursement-config && echo "Error updating reputationd reimbursement frequency" && return 1
-            echomult "Removed the Evernode reputation reimbursement system."
-        else
-            echo "Evernode reputation reimbursement value is not configured."
-        fi
     }
 
     # Begin setup execution flow --------------------
@@ -2398,6 +2327,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             to you since we will be making modifications to your system configuration.
             \n\nContinue?" && exit 1
 
+        check_ipv4_req
         check_sys_req
         check_prereq
 
@@ -2690,37 +2620,22 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         elif [ "$2" == "opt-out" ]; then
             ! confirm "Are you sure you want to opt out from Evernode reputation for reward distribution?" "n" && exit 1
             if ! remove_reputationd; then
-                echomult "\nError occured removing ReputationD."
+                echomult "\nError occured removing ReputationD. Retry with the same command again."
                 exit 1
             fi
         elif [ "$2" == "status" ]; then
             echo ""
-            reputationd_info
-            echo ""
             ! sudo -u $REPUTATIOND_USER REPUTATIOND_DATA_DIR=$REPUTATIOND_DATA node $REPUTATIOND_BIN repinfo && echo "Error getting reputation status" && exit 1
-        elif [ "$2" == "reimburse" ]; then
-            if [ "$3" == "set" ]; then
-                if ! configure_reputationd_reimbursement; then
-                    echomult "\nError occured setting ReputationD Reimbursement."
-                    exit 1
-                fi
-            elif [ "$3" == "remove" ]; then
-                if ! remove_reputationd_reimbursement; then
-                    echomult "\nError occured removing ReputationD Reimbursement."
-                    exit 1
-                fi
-            else
-                echomult "ReputationD management reimbursing tool
-                \nSupported commands:
-                \nset - set a reimbursing evernode contract lease amount.
-                \nremove - remove reimbursing evernode contract lease amount." && exit 1
-            fi
+            echo -e "\n"
+            reputationd_info
+
+            echomult "\nNOTE: To participate in this reputation assessment process continuously, you need to ensure that your reputation account
+            \nhas a sufficient EVR balance to perform the instance acquisitions."
         else
             echomult "ReputationD management tool
             \nSupported commands:
             \nopt-in - Opt in to the Evernode reputation for reward distribution.
             \nopt-out - Opt out from the Evernode reputation for reward distribution.
-            \nreimburse <set|remove> - Set or Remove contract lease reimbursement configurations.
             \nstatus - Check the status of Evernode reputation for reward distribution." && exit 1
         fi
     fi
