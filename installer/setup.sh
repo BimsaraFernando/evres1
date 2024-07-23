@@ -11,7 +11,6 @@
 
     evernode="Evernode"
     maxmind_creds="687058:FtcQjM0emHFMEfgI"
-    cgrulesengd_default="cgrulesengd"
     alloc_ratio=80
     ramKB_per_instance=524288
     instances_per_core=3
@@ -26,7 +25,7 @@
     log_dir=/tmp/evernode
     reputationd_script_dir=$(dirname "$(realpath "$0")")
     root_user="root"
-
+    
     repo_owner="BimsaraFernando"
     repo_name="evres1"
     desired_branch="main"
@@ -272,7 +271,7 @@
         else
             version=$(node -v | cut -d '.' -f1)
             version=${version:1}
-            if [[ "$version" -lt 20 ]]; then
+            if [[ $version -lt 20 ]]; then
                 echo "$evernode requires NodeJs 20.x or later. Your system has NodeJs $version installed. Either remove the NodeJs installation or upgrade to NodeJs 20.x."
                 exit 1
             fi
@@ -685,16 +684,6 @@
         done
     }
 
-    function check_ipv4_req() {
-        # Check for IPv4 addresses
-        local ipv4_addresses=$(ip -4 addr show | grep inet)
-        if [ -z "$ipv4_addresses" ]; then
-            echomult "Your system does not support IPv4."
-            echomult "$evernode host registration requires IPv4 support for dApp deployment."
-            exit 1
-        fi
-    }
-
     function set_ipv6_subnet() {
 
         ipv6_subnet="-"
@@ -753,15 +742,7 @@
         done
     }
 
-    function set_cgrules_svc() {
-        local filepath=$(grep "ExecStart.*=.*/cgrulesengd$" /etc/systemd/system/*.service | head -1 | awk -F : ' { print $1 } ')
-        if [ -n "$filepath" ]; then
-            local filename=$(basename $filepath)
-            cgrulesengd_service="${filename%.*}"
-        fi
-        # If service not detected, use the default name.
-        [ -z "$cgrulesengd_service" ] && cgrulesengd_service=$cgrulesengd_default || echo "cgroups rules engine service found: '$cgrulesengd_service'"
-    }
+
 
     function set_instance_alloc() {
         [ -z $alloc_ramKB ] && alloc_ramKB=$(((ramKB / 100) * alloc_ratio))
@@ -1455,7 +1436,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
 
         if [ "$upgrade" == "0" ]; then
             echo "Installing other prerequisites..."
-            ! ./prereq.sh $cgrulesengd_service 2>&1 |
+            ! ./prereq.sh 2>&1 |
                 tee -a >(stdbuf --output=L awk '{ cmd="date -u +\"%Y-%m-%d %H:%M:%S\""; cmd | getline utc_time; close(cmd); print utc_time, $0 }' >>$logfile) | stdbuf --output=L grep -E 'STAGE' |
                 while read -r line; do
                     cleaned_line=$(echo "$line" | sed -E 's/STAGE//g' | awk '{sub(/^[ \t]+/, ""); print}')
@@ -2330,7 +2311,6 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             to you since we will be making modifications to your system configuration.
             \n\nContinue?" && exit 1
 
-        check_ipv4_req
         check_sys_req
         check_prereq
 
@@ -2388,8 +2368,6 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         [ ! -f "$MB_XRPL_CONFIG" ] && set_ipv6_subnet
         [ "$ipv6_subnet" != "-" ] && [ "$ipv6_net_interface" != "-" ] && echo -e "Using $ipv6_subnet IPv6 subnet on $ipv6_net_interface for contract instances.\n"
 
-        set_cgrules_svc
-        echo -e "Using '$cgrulesengd_service' as cgroups rules engine service.\n"
 
         [ ! -f "$SASHIMONO_CONFIG" ] && set_instance_alloc
         echo -e "Using allocation $(GB $alloc_ramKB) memory, $(GB $alloc_swapKB) Swap, $(GB $alloc_diskKB) disk space, distributed among $alloc_instcount contract instances.\n"
