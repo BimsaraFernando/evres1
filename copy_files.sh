@@ -1,5 +1,5 @@
-# ./sashi_release.sh v3.6.26 main kavindu126
-#curl -fsSL https://github.com/BimsaraFernando/evres1/releases/download/sashi_v3.6.26/setup.sh | cat | sudo SKIP_SYSREQ=1 NO_DOMAIN=1 NETWORK=devnet bash -s install
+# ./sashi_release.sh v3.6.267 main kavindu127
+#curl -fsSL https://github.com/BimsaraFernando/evres1/releases/download/sashi_v3.6.27/setup.sh | cat | sudo SKIP_SYSREQ=1 NO_DOMAIN=1 NETWORK=devnet bash -s install
 #!/bin/bash
 
 # Define an array of source and destination file paths
