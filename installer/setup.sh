@@ -11,6 +11,7 @@
 
     evernode="Evernode"
     maxmind_creds="687058:FtcQjM0emHFMEfgI"
+    cgrulesengd_default="cgrulesengd"
     alloc_ratio=80
     ramKB_per_instance=524288
     instances_per_core=3
@@ -269,7 +270,7 @@
             version=$(node -v | cut -d '.' -f1)
             version=${version:1}
             if [[ $version -lt 20 ]]; then
-                echo "$evernode requires NodeJs 20.x or later. Your system has NodeJs $version installed. Either remove the NodeJs installation or upgrade to NodeJs 20.x."
+                echo "$evernode requires NodeJs 20.x or later. You system has NodeJs $version installed. Either remove the NodeJs installation or upgrade to NodeJs 20.x."
                 exit 1
             fi
         fi
@@ -320,7 +321,7 @@
         local osversion=$(grep -ioP '^VERSION_ID=\K.+' /etc/os-release)
 
         local errors=""
-        ([ "$os" != "ubuntu" ] || ([ "$osversion" == "20.04" ] || [ "$osversion" == "24.04" ])) && errors=" OS: $os $osversion (Support is for Ubuntu 20.04 and 24.04 only.)\n"
+        ([ "$os" != "ubuntu" ] || [ "$osversion" != '"20.04"' ]) && errors=" OS: $os $osversion (required: Ubuntu 20.04)\n"
         [ $ramKB -lt 2000000 ] && errors="$errors RAM: $(GB $ramKB) (required: 2 GB RAM)\n"
         [ $swapKB -lt 2000000 ] && errors="$errors Swap: $(GB $swapKB) (required: 2 GB Swap)\n"
         [ $diskKB -lt 4000000 ] && errors="$errors Disk space (/home): $(GB $diskKB) (required: 4 GB)\n"
@@ -329,7 +330,7 @@
             echo "System check complete. Your system is capable of becoming an $evernode host."
         else
             echomult "Your system does not meet following $evernode system requirements:\n $errors"
-            echomult "$evernode host registration requires Ubuntu 24.04 or 20.04 with minimum 2 GB RAM,
+            echomult "$evernode host registration requires Ubuntu 20.04 with minimum 2 GB RAM,
             2 GB Swap and 4 GB free disk space for /home. Aborting setup."
             exit 1
         fi
@@ -681,6 +682,16 @@
         done
     }
 
+    function check_ipv4_req() {
+        # Check for IPv4 addresses
+        local ipv4_addresses=$(ip -4 addr show | grep inet)
+        if [ -z "$ipv4_addresses" ]; then
+            echomult "Your system does not support IPv4."
+            echomult "$evernode host registration requires IPv4 support for dApp deployment."
+            exit 1
+        fi
+    }
+
     function set_ipv6_subnet() {
 
         ipv6_subnet="-"
@@ -737,6 +748,16 @@
 
             break
         done
+    }
+
+    function set_cgrules_svc() {
+        local filepath=$(grep "ExecStart.*=.*/cgrulesengd$" /etc/systemd/system/*.service | head -1 | awk -F : ' { print $1 } ')
+        if [ -n "$filepath" ]; then
+            local filename=$(basename $filepath)
+            cgrulesengd_service="${filename%.*}"
+        fi
+        # If service not detected, use the default name.
+        [ -z "$cgrulesengd_service" ] && cgrulesengd_service=$cgrulesengd_default || echo "cgroups rules engine service found: '$cgrulesengd_service'"
     }
 
     function set_instance_alloc() {
@@ -1431,7 +1452,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
 
         if [ "$upgrade" == "0" ]; then
             echo "Installing other prerequisites..."
-            ! ./prereq.sh 2>&1 |
+            ! ./prereq.sh $cgrulesengd_service 2>&1 |
                 tee -a >(stdbuf --output=L awk '{ cmd="date -u +\"%Y-%m-%d %H:%M:%S\""; cmd | getline utc_time; close(cmd); print utc_time, $0 }' >>$logfile) | stdbuf --output=L grep -E 'STAGE' |
                 while read -r line; do
                     cleaned_line=$(echo "$line" | sed -E 's/STAGE//g' | awk '{sub(/^[ \t]+/, ""); print}')
@@ -2305,6 +2326,7 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
             to you since we will be making modifications to your system configuration.
             \n\nContinue?" && exit 1
 
+        check_ipv4_req
         check_sys_req
         check_prereq
 
@@ -2362,6 +2384,8 @@ WantedBy=timers.target" >/etc/systemd/system/$EVERNODE_AUTO_UPDATE_SERVICE.timer
         [ ! -f "$MB_XRPL_CONFIG" ] && set_ipv6_subnet
         [ "$ipv6_subnet" != "-" ] && [ "$ipv6_net_interface" != "-" ] && echo -e "Using $ipv6_subnet IPv6 subnet on $ipv6_net_interface for contract instances.\n"
 
+        set_cgrules_svc
+        echo -e "Using '$cgrulesengd_service' as cgroups rules engine service.\n"
 
         [ ! -f "$SASHIMONO_CONFIG" ] && set_instance_alloc
         echo -e "Using allocation $(GB $alloc_ramKB) memory, $(GB $alloc_swapKB) Swap, $(GB $alloc_diskKB) disk space, distributed among $alloc_instcount contract instances.\n"
